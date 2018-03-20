@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <script src="/static/js/jquery-1.12.4.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <script src="/static/zhuce/register.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        .tishi{
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<form action="create" method="post" role="form" id="form">
+{#    {% csrf_token %}#}
+    <div class="row">
+        <div class="col-md-1">用户名：</div>
+        <div class=" col-md-2">{{ list.userName }}</div><br>
+    </div>
+
+    <div class="form-group">
+        <lable>密码：</lable>
+        <input type="password" name="password" placeholder="请输入密码" class="form-control"  id="pwd">
+        <p class="help-block tishi" style="color: red">密码为10~20位字母或字符</p>
+    </div>
+    <div class="form-group">
+        <lable>请确认密码：</lable>
+        <input type="password" name="passwordR" placeholder="请确认密码" class="form-control" id="cpwd">
+        <p class="help-block tishi" style="color: red" >密码为10~20位字母或字符</p>
+    </div>
+    <div class="form-group">
+        <input type="submit" class="btn btn-default" value="提交" id="button">
+    </div>
+</form>
+<button id="al">按钮</button>
+</body>
+</html>
