@@ -1,53 +1,132 @@
-# import cv2
-# img = cv2.imread('jiaxiao.JPEG')
-#
-# cv2.namedWindow("w")
-# cv2.imshow('w',img)
-# cv2.waitKey(0)
+# coding=gbk
+__author__ = 'yangle'
+__time__ = '2018/3/22 0:13'
 
-# import cv2
-#
-# cv2.namedWindow('testcamera')
-#
-# capture = cv2.imread()
-#
-# while 1:
-#     ret, img = capture.read()
-#     cv2.imshow('testcamera', img)
-#     key = cv2.waitKey(1)
-#     num += 1
-#     if key == 1048603:  # <ESC>
-#         break
-#
-# capture.release()
-# cv2.destroyAllWindows()
+import socket;
+import threading;
+import os;
+import time;
+import numpy
+import cv2
+import re
+from django.shortcuts import render
+from django.http import request
+class webCamConnect:
+    def __init__(self, resolution = [640,480], remoteAddress = ("192.168.1.104", 7999), windowName = "video"):
+        self.remoteAddress = remoteAddress;
+        self.resolution = resolution;
+        self.name = windowName;
+        self.mutex = threading.Lock();
+        self.src=911+15
+        self.interval=0
+        self.path=os.getcwd()
+        self.img_quality = 15
+    def _setSocket(self):
+        self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
+    def connect(self):
+        self._setSocket();
+        self.socket.connect(('100.65.30.81',7999));
+    def _processImage(self):
+        self.socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
+        while(1):
+            # info = struct.unpack("l", self.socket.recv(8));
+            info = self.socket.recv(4).decode('utf-8')
+            print(info)
+            bufSize = int(info)
+            if bufSize:
+                 try:
+                    self.mutex.acquire();
+                    self.buf=b''
+                    # tempBuf=self.buf
+                    while(bufSize):                 #循环读取到一张图片的长度
+                        tempBuf = self.socket.recv(bufSize);
+                        bufSize -= len(tempBuf);
+                        self.buf += tempBuf;
+                        print('1')
+                        data = numpy.fromstring(self.buf,dtype='uint8')
+                        print(2)
+                        self.image=cv2.imdecode(data,1)
+                        print(3)
+                        yield render(request,'video.html',{'video':self.image})
+                        cv2.imshow(self.name,self.image)
+                 except:
+                     print("接收失败")
+                     pass;
+                 finally:
+                     self.mutex.release();
+                     if cv2.waitKey(10) == 27:
+                         self.socket.close()
+                         cv2.destroyAllWindows()
+                         print("放弃连接")
+                         break
 
+    def playVideo(self):
+        while(1):
+            next(self._processImage())
+    def getData(self, interval):
+        showThread=threading.Thread(target=self.playVideo);
+        showThread.start();
+        if interval != 0:   # 非0则启动保存截图到本地的功能
+            saveThread=threading.Thread(target=self._savePicToLocal,args = (interval,
+                ));
+            saveThread.setDaemon(1);
+            saveThread.start();
+    def setWindowName(self, name):
+        self.name = name;
+    def setRemoteAddress(self,remoteAddress):
+        self.remoteAddress = remoteAddress;
+    def _savePicToLocal(self, interval):
+        while(1):
+            try:
+                self.mutex.acquire();
+                path="~/Desktop/MyGraduationWork/static/img/video";
+                if not os.path.exists(path):
+                    os.mkdir(path);
+                cv2.imwrite(path + "/" + time.ctime()+'msg' + ".jpg",self.image)
+            except:
+                pass;
+            finally:
+                self.mutex.release();
+                time.sleep(interval);
+    def check_config(self):
+        path=os.getcwd()
+        print(path)
+        if os.path.isfile(r'%s\video_config.txt'%path) is False:
+            f = open("video_config.txt", 'w+')
+            print("w = %d,h = %d" %(self.resolution[0],self.resolution[1]),file=f)
+            print("IP is %s:%d" %(self.remoteAddress[0],self.remoteAddress[1]),file=f)
+            print("Save pic flag:%d" %(self.interval),file=f)
+            print("image's quality is:%d,range(0~95)"%(self.img_quality),file=f)
+            f.close()
+            print("初始化配置");
+        else:
+            f = open("video_config.txt", 'r+')
+            tmp_data=f.readline(50)#1 resolution
+            num_list=re.findall(r"\d+",tmp_data)
+            self.resolution[0]=int(num_list[0])
+            self.resolution[1]=int(num_list[1])
+            tmp_data=f.readline(50)#2 ip,port
+            num_list=re.findall(r"\d+",tmp_data)
+            str_tmp="%d.%d.%d.%d" %(int(num_list[0]),int(num_list[1]),int(num_list[2]),int(num_list[3]))
+            self.remoteAddress=(str_tmp,int(num_list[4]))
+            tmp_data=f.readline(50)#3 savedata_flag
+            self.interval=int(re.findall(r"\d",tmp_data)[0])
+            tmp_data=f.readline(50)#3 savedata_flag
+            #print(tmp_data)
+            self.img_quality=int(re.findall(r"\d+",tmp_data)[0])
+           #print(self.img_quality)
+            self.src=911+self.img_quality
+            f.close()
+            print("读取配置")
+def main():
+    print("创建连接...")
+    cam = webCamConnect();
+    cam.check_config()
+    print("像素为:%d * %d"%(cam.resolution[0],cam.resolution[1]))
+    print("目标ip为%s:%d"%(cam.remoteAddress[0],cam.remoteAddress[1]))
+    cam.connect();
+    cam.getData(cam.interval);
+if __name__ == "__main__":
+    main()
 
-import cv2.cv as cv
-import socket, time, Image, StringIO
-
-HOST, PORT = "192.168.0.102", 9999
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((HOST, PORT))
-f = sock.makefile()
-
-cv.NamedWindow("camera_server")
-
-while True:
-    msg = f.readline()
-    if not msg:
-        break
-    print(len(msg), msg[-2])
-    jpeg = msg.replace("\-n", "\n")
-    buf = StringIO.StringIO(jpeg[0:-1])
-    buf.seek(0)
-    pi = Image.open(buf)
-    img = cv.CreateImageHeader((640, 480), cv.IPL_DEPTH_8U, 3)
-    cv.SetData(img, pi.tostring())
-    buf.close()
-    cv.ShowImage("camera_server", img)
-    if cv.WaitKey(10) == 27:
-        break
-
-sock.close()
-cv.DestroyAllWindows()

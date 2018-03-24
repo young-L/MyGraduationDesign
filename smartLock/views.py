@@ -1,40 +1,163 @@
 from django.shortcuts import render,redirect
-from django.http import HttpResponse
-from .models import *
+from django.http import HttpResponse,JsonResponse
+from .models import User
+from django.views.generic import View
+import re
+from MyGraduationWork import settings
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired
+from django.core.mail import send_mail
+from django.contrib.auth import authenticate,login
+from . import Vdemo
 
 # Create your views here.
 def index(request):
-    return render(request,'first/index.html')
+    return render(request,'index.html')
 
-def yy(request):
-    return render(request, 'first/123.html')
+class zhuceView(View):
+    def get(self, request):
+        return render(request, 'zhuce.html',{'title':'注册'})
 
-def zhuce(request):
-    return render(request,'first/zhuce.html')
+    def post(self, request):
+        # 接收数据
+        dict = request.POST
+        uname = dict.get('user_name')
+        upwd = dict.get('pwd')
+        cpwd = dict.get('cpwd')
+        uemail = dict.get('email')
 
-def chuangjian(request):
-    dic = request.POST
-    name = dic.get('userName')
-    word = dic.get('password')
-    people = Users.man.create(name,word)
-    people.save()
-    return redirect('/')
 
-def page_dl(request):
-    return render(request,'first/denglu.html')
+        # 判断数据是否填写完整
+        if not all([uname, upwd, cpwd, uemail]):
+            return render(request, 'zhuce.html', {'err_msg': '请将信息填写完整'})
 
-def denglu(request):
-    dic = request.POST
-    name = dic.get('dengluming')
-    word = dic.get('denglumima')
-    if Users.man.filter(userName = name,password=word):
-        use = Users.man.get(userName=name)
-        return render(request,'first/kongzhi.html',{'use':use})
-    return render(request,'first/denglu.html',{'alert':'<script>$(function () {alert("用户名或密码错误")})</script>'})
+        # 用户错误提示的数据
+        context = {
+            'uname': uname,
+            'upwd': upwd,
+            'cpwd': cpwd,
+            'email': uemail,
+            'err_msg': '',
+            'title':'注册处理'
+        }
 
-def cuowu(request):
-    return render(request,'first/cuowu.html')
+        # 判断两次密码是否一致
+        if upwd != cpwd:
+            context['err_msg'] = '两次密码不一致'
+            return render(request, 'zhuce.html', context)
 
-def page_changePwd(request,id):
-    list = Users.man.get(id=id)
-    return render(request,'first/page_changePwd.html',{'list':list})
+        # 判断用户名是否存在
+        if User.objects.filter(username=uname).count() > 0:
+            context['err_msg'] = '用户名已经存在'
+            return render(request, 'zhuce.html', context)
+
+        # 判断邮箱格式是否正确
+        if not re.match(r'[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}', uemail):
+            context['err_msg'] = '邮箱格式不正确'
+            return render(request, 'zhuce.html', context)
+
+        # 判断邮箱是否存在
+        # if User.objects.filter(email=uemail).count() > 0:
+        #     context['err_msg'] = '邮箱已经存在'
+        #     return render(request, 'register.html', context)
+
+        # 处理（创建用户对象）
+        user = User.objects.create_user(uname, '', upwd)
+        # 稍候进行邮件激发，或许账户不被激活
+        user.is_active = False
+        user.save()
+
+        # 将账号信息进行加密
+        serializer = Serializer(settings.SECRET_KEY, 60 * 60 * 2)
+        value = serializer.dumps({'id': user.id,'email':uemail})  # 返回bytes
+        value = value.decode()  # 转成字符串，用于拼接地址
+
+        # 向用户发送邮件
+        # msg='<a href="http://127.0.0.1:8000/user/active/%d">点击激活</a>'%user.id
+        msg = '<a href="http://127.0.0.1:8000/active/%s">点击激活</a>' % value
+        send_mail('smartLock账户激活', '', settings.EMAIL_FROM, [uemail], html_message=msg)
+
+
+
+        # 给出响应
+        return HttpResponse('请在两个小时内前往邮箱，激活账户')
+
+
+def active(request, value):
+    serializer = Serializer(settings.SECRET_KEY)
+    try:
+        # 解析用户编号
+        dict = serializer.loads(value)
+        userid = dict.get('id')
+        # 激活账户
+        user = User.objects.get(pk=userid)
+        user.is_active = True
+        user.email = dict.get('email')
+        user.save()
+
+        # 转向登录页面
+        return redirect('/login')
+    except SignatureExpired as e:
+        return HttpResponse('对不起，激活链接已经过期')
+
+def exists(request):
+    '判断用户名或邮箱是否存在'
+    uname=request.GET.get('uname')
+    if uname is not None:
+        #查询用户名是否存在
+        result=User.objects.filter(username=uname).count()
+    return JsonResponse({'result':result})
+
+class LoginView(View):
+    def get(self,request):
+        uname=request.COOKIES.get('uname','')
+        return render(request,'login.html',{'title':'登录','uname':uname})
+    def post(self,request):
+        #接收数据
+        dict=request.POST
+        uname=dict.get('username')
+        pwd=dict.get('pwd')
+        remember=dict.get('remember')
+
+        #构造返回值
+        context={
+            'title':'登录处理',
+            'uname':uname,
+            'pwd':pwd,
+            'err_msg': '请填写完成信息'
+        }
+
+        #验证是否填写数据
+        if not all([uname,pwd]):
+            return render(request,'login.html',context)
+
+        #验证用户名、密码是否正确
+        user=authenticate(username=uname,password=pwd)
+        if user is None:
+            context['err_msg']='用户名或密码错误'
+            return render(request,'login.html',context)
+
+        #判断用户是否激活
+        if not user.is_active:
+            context['err_msg']='请到邮箱中激活账户'
+            return render(request,'login.html',context)
+
+        #记录状态
+        login(request,user)
+
+        response=redirect('/info')
+
+        #是否记住用户名
+        if remember is not None:
+            response.set_cookie('uname',uname,expires=60*60*24*7)
+        else:
+            response.delete_cookie('uname')
+
+        # 转向用户中心
+        return response
+
+def info(request):
+    return render(request,'info.html')
+
+def video(request):
+    Vdemo.main()
+    return render(request,'video.html')
