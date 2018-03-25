@@ -11,6 +11,8 @@ import cv2
 import re
 from django.shortcuts import render
 from django.http import request
+from fdfs_client.client import Fdfs_client
+
 class webCamConnect:
     def __init__(self, resolution = [640,480], remoteAddress = ("192.168.1.104", 7999), windowName = "video"):
         self.remoteAddress = remoteAddress;
@@ -18,7 +20,7 @@ class webCamConnect:
         self.name = windowName;
         self.mutex = threading.Lock();
         self.src=911+15
-        self.interval=0
+        self.interval=1
         self.path=os.getcwd()
         self.img_quality = 15
     def _setSocket(self):
@@ -26,11 +28,12 @@ class webCamConnect:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
     def connect(self):
         self._setSocket();
-        self.socket.connect(('100.65.30.81',7999));
+        self.socket.connect(('192.168.43.132',7999));
     def _processImage(self):
         self.socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
         while(1):
             # info = struct.unpack("l", self.socket.recv(8));
+            # client = Fdfs_client('/etc/fdfs/client.conf')
             info = self.socket.recv(4).decode('utf-8')
             print(info)
             bufSize = int(info)
@@ -48,7 +51,6 @@ class webCamConnect:
                         print(2)
                         self.image=cv2.imdecode(data,1)
                         print(3)
-                        yield render(request,'video.html',{'video':self.image})
                         cv2.imshow(self.name,self.image)
                  except:
                      print("Ω” ’ ß∞‹")

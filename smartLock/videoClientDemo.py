@@ -24,7 +24,7 @@ class webCamConnect:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
     def connect(self):
         self._setSocket();
-        self.socket.connect(('100.65.30.81',7999));
+        self.socket.connect(('192.168.43.132',7999));
     def _processImage(self):
         self.socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
         while(1):

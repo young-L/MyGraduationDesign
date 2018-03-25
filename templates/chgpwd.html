@@ -1,0 +1,55 @@
+{% extends 'base_bottom.html' %}
+
+{% block head %}
+    <script type="text/javascript" src="/static/js/chgpwd.js"></script>
+{% endblock head %}
+
+{% block body %}
+
+<div class="register_con">
+
+
+		<div class="r_con fr">
+			<div class="reg_title clearfix">
+				<h1>修改密码</h1>
+				<a href="/">返回</a>
+			</div>
+			<div class="reg_form clearfix">
+				<form method="post">
+                    {% csrf_token %}
+				<ul>
+					<li>
+						<label>用户名:</label>
+{#						<input type="text" name="user_name" id="user_name" value="{{ uname }}">#}
+						<label>{{ user.username }}</label>
+					</li>
+					<li>
+						<label>原密码:</label>
+						<input type="password" name="opwd" id="opwd" value="{{ opwd }}">
+						<span class="error_tip">提示信息</span>
+					</li>
+					<li>
+						<label>新密码:</label>
+						<input type="password" name="npwd" id="npwd" value="{{ npwd }}">
+						<span class="error_tip">提示信息</span>
+					</li>
+					<li>
+						<label>确认密码</label>
+						<input type="password" name="cpwd" id="cpwd" value="{{ cpwd }}">
+						<span class="error_tip">提示信息</span>
+					</li>
+					<li class="reg_sub">
+						<input type="submit" value="提 交">
+						<span class="error_tip" style="display: block;">{{ err_msg }}</span>
+					</li>
+				</ul>
+				</form>
+			</div>
+
+		</div>
+
+	</div>
+
+
+
+{% endblock body %}

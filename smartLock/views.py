@@ -6,8 +6,9 @@ import re
 from MyGraduationWork import settings
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired
 from django.core.mail import send_mail
-from django.contrib.auth import authenticate,login
+from django.contrib.auth import authenticate,login,logout,update_session_auth_hash
 from . import Vdemo
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 def index(request):
@@ -100,7 +101,7 @@ def active(request, value):
         return HttpResponse('对不起，激活链接已经过期')
 
 def exists(request):
-    '判断用户名或邮箱是否存在'
+    '判断用户名是否存在'
     uname=request.GET.get('uname')
     if uname is not None:
         #查询用户名是否存在
@@ -146,18 +147,73 @@ class LoginView(View):
 
         response=redirect('/info')
 
+        next_page = request.GET.get('next')
+
         #是否记住用户名
         if remember is not None:
             response.set_cookie('uname',uname,expires=60*60*24*7)
         else:
             response.delete_cookie('uname')
 
-        # 转向用户中心
-        return response
+        if next_page:
+            return redirect(next_page)
+        else:
+            return response
 
+
+@login_required
 def info(request):
     return render(request,'info.html')
 
+@login_required
 def video(request):
+    # 视频
     Vdemo.main()
     return render(request,'video.html')
+
+def logout_user(request):
+    logout(request)
+    return redirect('/')
+
+# 登陆状态检测
+class LoginRequireMixin(object):
+    @classmethod
+    def as_view(cls):
+        view = super().as_view()
+        return login_required(view)
+
+def judge_pwd(request):
+    '判断密码是否正确'
+    password = request.GET.get('opwd')
+    print(password)
+    name = request.user.username
+    print(name)
+    result = authenticate(username=name,password=password)
+    if result is None:
+        return JsonResponse({'result': 'NO'})
+    else:
+        return JsonResponse({'result':'YES'})
+
+
+class ChgpwdView(LoginRequireMixin,View):
+    def get(self,request):
+        user = request.user
+        return render(request,'chgpwd.html',{'user':user})
+
+    def post(self,request):
+
+        dic = request.POST
+        opwd = dic.get('opwd')
+        npwd = dic.get('npwd')
+        cpwd = dic.get('cpwd')
+        context = {'opwd':opwd,'npwd':npwd,'cpwd':cpwd,'err_msg':'','title':'修改密码'}
+        if not all([opwd, npwd, cpwd]):
+            context['err_msg'] = '请将信息填写完整'
+            return render(request, 'chgpwd.html', context)
+
+        if npwd != cpwd:
+            context['err_msg'] = '两次密码不一致'
+            return render(request, 'zhuce.html', context)
+
+        User.objects.filter(username=request.user.username).set_password(npwd)
+        return redirect('/login')

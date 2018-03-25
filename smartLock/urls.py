@@ -9,5 +9,8 @@ urlpatterns = [
     url(r'^exists$',views.exists),
     url(r'^info$',views.info),
     url(r'^video$',views.video),
+    url(r'^logout$',views.logout_user),
+    url(r'^chgpwd$',views.ChgpwdView.as_view()),
+    url(r'^judge_pwd$',views.judge_pwd),
 
 ]

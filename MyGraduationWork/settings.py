@@ -124,13 +124,15 @@ EMAIL_HOST_PASSWORD = 'yangle123'
 EMAIL_FROM = 'SmartLock<ylwebserver@163.com>'
 
 
-# 记录用户登陆状态
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://192.168.243.193:6379/5",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
-    }
-}
+# # 记录用户登陆状态
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://192.168.243.193:6379/5",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+# }
+
+LOGIN_URL = '/login'
