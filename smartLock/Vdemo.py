@@ -9,9 +9,7 @@ import time;
 import numpy
 import cv2
 import re
-from django.shortcuts import render
-from django.http import request
-from fdfs_client.client import Fdfs_client
+from django.conf import settings
 
 class webCamConnect:
     def __init__(self, resolution = [640,480], remoteAddress = ("192.168.1.104", 7999), windowName = "video"):
@@ -20,7 +18,7 @@ class webCamConnect:
         self.name = windowName;
         self.mutex = threading.Lock();
         self.src=911+15
-        self.interval=1
+        self.interval=0
         self.path=os.getcwd()
         self.img_quality = 15
     def _setSocket(self):
@@ -28,20 +26,22 @@ class webCamConnect:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
     def connect(self):
         self._setSocket();
-        self.socket.connect(('192.168.43.132',7999));
+        self.socket.connect(('192.168.78.46',7999));
     def _processImage(self):
         self.socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
+        i = 1
         while(1):
             # info = struct.unpack("l", self.socket.recv(8));
-            # client = Fdfs_client('/etc/fdfs/client.conf')
             info = self.socket.recv(4).decode('utf-8')
             print(info)
             bufSize = int(info)
+
             if bufSize:
                  try:
                     self.mutex.acquire();
                     self.buf=b''
                     # tempBuf=self.buf
+
                     while(bufSize):                 #循环读取到一张图片的长度
                         tempBuf = self.socket.recv(bufSize);
                         bufSize -= len(tempBuf);
@@ -50,8 +50,15 @@ class webCamConnect:
                         data = numpy.fromstring(self.buf,dtype='uint8')
                         print(2)
                         self.image=cv2.imdecode(data,1)
+                        path = '/home/python/Desktop/MyGraduationDesign/static/img/video/image%d.jpg' %i
+                        print(path)
+                        with open(path,'wb')as f:
+                            f.write(tempBuf)
+                        i = i + 1
                         print(3)
+
                         cv2.imshow(self.name,self.image)
+
                  except:
                      print("接收失败")
                      pass;
@@ -62,12 +69,8 @@ class webCamConnect:
                          cv2.destroyAllWindows()
                          print("放弃连接")
                          break
-
-    def playVideo(self):
-        while(1):
-            next(self._processImage())
     def getData(self, interval):
-        showThread=threading.Thread(target=self.playVideo);
+        showThread=threading.Thread(target=self._processImage);
         showThread.start();
         if interval != 0:   # 非0则启动保存截图到本地的功能
             saveThread=threading.Thread(target=self._savePicToLocal,args = (interval,
@@ -79,15 +82,21 @@ class webCamConnect:
     def setRemoteAddress(self,remoteAddress):
         self.remoteAddress = remoteAddress;
     def _savePicToLocal(self, interval):
+        i = 1
         while(1):
             try:
                 self.mutex.acquire();
-                path="~/Desktop/MyGraduationWork/static/img/video";
+                print('55555555555')
+                path='/home/python/Desktop/MyGraduationDesign/static/img/video/';
+                print('6666666666')
                 if not os.path.exists(path):
                     os.mkdir(path);
-                cv2.imwrite(path + "/" + time.ctime()+'msg' + ".jpg",self.image)
+                print('7777777777')
+                cv2.imwrite(path + 'image%d.jpg'%i,self.image)
+                i += 1
             except:
-                pass;
+                print('888888888888')
+
             finally:
                 self.mutex.release();
                 time.sleep(interval);

@@ -1,6 +1,5 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse,JsonResponse
-from .models import User
 from django.views.generic import View
 import re
 from MyGraduationWork import settings
@@ -9,6 +8,7 @@ from django.core.mail import send_mail
 from django.contrib.auth import authenticate,login,logout,update_session_auth_hash
 from . import Vdemo
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 # Create your views here.
 def index(request):
@@ -216,4 +216,11 @@ class ChgpwdView(LoginRequireMixin,View):
             return render(request, 'zhuce.html', context)
 
         User.objects.filter(username=request.user.username).set_password(npwd)
+        
         return redirect('/login')
+
+def video_img(request):
+    # with open(settings.BASE_DIR+'/static/img/video/image.jpg', 'rb') as f:
+    #     data = f.read()
+
+    return JsonResponse({'data':'/static/img/video/image'})

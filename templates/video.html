@@ -3,9 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <script src="/static/js/jquery-1.12.4.min.js"></script>
 </head>
+<script>
+    $(function () {
+        var time1 = setInterval(myfunc,200);
+        var a = 1
+        alert('222222222222')
+        function myfunc() {
+
+            $.get('video_img',function (data) {
+                $('#video').attr('src',data['data']+a+'.jpg');
+
+            })
+            a += 1
+        }
+
+    })
+
+</script>
 <body>
 
-<img src={{  }} alt="">
+<img src="" alt="视频" class="video" id="video">
+<button></button>
 </body>
 </html>

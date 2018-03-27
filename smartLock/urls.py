@@ -12,5 +12,6 @@ urlpatterns = [
     url(r'^logout$',views.logout_user),
     url(r'^chgpwd$',views.ChgpwdView.as_view()),
     url(r'^judge_pwd$',views.judge_pwd),
+    url(r'^video_img$',views.video_img),
 
 ]
