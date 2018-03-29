@@ -7,6 +7,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, Signatur
 from django.core.mail import send_mail
 from django.contrib.auth import authenticate,login,logout,update_session_auth_hash
 from . import Vdemo
+from . import models
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 
@@ -47,7 +48,7 @@ class zhuceView(View):
             return render(request, 'zhuce.html', context)
 
         # 判断用户名是否存在
-        if User.objects.filter(username=uname).count() > 0:
+        if models.User.objects.filter(username=uname).count() > 0:
             context['err_msg'] = '用户名已经存在'
             return render(request, 'zhuce.html', context)
 
@@ -62,7 +63,7 @@ class zhuceView(View):
         #     return render(request, 'register.html', context)
 
         # 处理（创建用户对象）
-        user = User.objects.create_user(uname, '', upwd)
+        user = models.User.objects.create_user(uname, '', upwd)
         # 稍候进行邮件激发，或许账户不被激活
         user.is_active = False
         user.save()
@@ -90,7 +91,7 @@ def active(request, value):
         dict = serializer.loads(value)
         userid = dict.get('id')
         # 激活账户
-        user = User.objects.get(pk=userid)
+        user = models.User.objects.get(pk=userid)
         user.is_active = True
         user.email = dict.get('email')
         user.save()
@@ -105,7 +106,14 @@ def exists(request):
     uname=request.GET.get('uname')
     if uname is not None:
         #查询用户名是否存在
-        result=User.objects.filter(username=uname).count()
+        result=models.User.objects.filter(username=uname).count()
+    return JsonResponse({'result':result})
+
+def check_email(request):
+    '判断邮箱是否存在'
+    uemail = request.GET.get('uemail')
+    if uemail is not None:
+        result = models.User.objects.filter(email=uemail).count()
     return JsonResponse({'result':result})
 
 class LoginView(View):
@@ -194,6 +202,52 @@ def judge_pwd(request):
     else:
         return JsonResponse({'result':'YES'})
 
+class forgetPassword(View):
+    # 将账号信息进行加密
+    def get(self,request):
+        return render(request,'forgetPassword.html')
+
+    def post(self,request):
+        dict = request.POST
+        uname = dict.get('user_name')
+        email = dict.get('email')
+        user = models.User.objects.get(username=uname)
+        serializer = Serializer(settings.SECRET_KEY, 60 * 60 * 2)
+        value = serializer.dumps({'id': user.id})
+        value = value.decode()  # 转成字符串，用于拼接地址
+
+        # 向用户发送邮件
+        msg = '<a href="http://127.0.0.1:8000/ch_password/%s">点击修改密码</a>' % value
+        send_mail('smartLock更改密码', '', settings.EMAIL_FROM, [email], html_message=msg)
+        return HttpResponse('请在两个小时内前往邮箱，设置新密码')
+
+class ch_password(View):
+    def get(self,request,value):
+        serializer = Serializer(settings.SECRET_KEY)
+        try:
+            # 解析用户编号
+            dict = serializer.loads(value)
+            userid = dict.get('id')
+
+            user = models.User.objects.get(pk=userid)
+            # 返回密码修改页
+            return render(request,'ch_password.html',{'user':user})
+        except SignatureExpired as e:
+            return HttpResponse('对不起，链接已经过期')
+
+    def post(self,request,value):
+        dict = request.POST
+        npwd = dict.get('npwd')
+        serializer = Serializer(settings.SECRET_KEY)
+        dict = serializer.loads(value)
+        userid = dict.get('id')
+        user = models.User.objects.get(pk=userid)
+        print(user.username)
+        print(npwd)
+        user.set_password(npwd)
+        user.save()
+        return redirect('/')
+
 
 class ChgpwdView(LoginRequireMixin,View):
     def get(self,request):
@@ -214,8 +268,10 @@ class ChgpwdView(LoginRequireMixin,View):
         if npwd != cpwd:
             context['err_msg'] = '两次密码不一致'
             return render(request, 'zhuce.html', context)
-
-        User.objects.filter(username=request.user.username).set_password(npwd)
+        username = request.user.username
+        user = models.User.objects.get(username=username)
+        user.set_password(npwd)
+        user.save()
         
         return redirect('/login')
 
