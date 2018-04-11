@@ -280,3 +280,11 @@ def video_img(request):
     #     data = f.read()
 
     return JsonResponse({'data':'/static/img/video/image'})
+
+@login_required
+def stop_video(request):
+    # 停止摄像头
+    # Vdemo.stop()
+    with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt','w') as f:
+        f.write('0')
+    return redirect('/info')

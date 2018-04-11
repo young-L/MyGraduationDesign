@@ -16,5 +16,6 @@ urlpatterns = [
     url(r'^forgetPassword$',views.forgetPassword.as_view()),
     url(r'^check_email$',views.check_email),
     url(r'^ch_password/(.+)$',views.ch_password.as_view()),
+    url(r'^stop_video$',views.stop_video),
 
 ]

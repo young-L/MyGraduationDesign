@@ -7,17 +7,20 @@
 </head>
 <script>
     $(function () {
-        var time1 = setInterval(myfunc,200);
-        var a = 1
-        alert('222222222222')
+        var time1 = setInterval(myfunc,400);
+        var a = 1;
+
+
+
         function myfunc() {
 
             $.get('video_img',function (data) {
                 $('#video').attr('src',data['data']+a+'.jpg');
 
-            })
+            });
             a += 1
         }
+
 
     })
 
@@ -25,6 +28,6 @@
 <body>
 
 <img src="" alt="视频" class="video" id="video">
-<button></button>
+<a href="stop_video" id="stop">返回</a>
 </body>
 </html>
