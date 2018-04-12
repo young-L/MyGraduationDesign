@@ -22,23 +22,17 @@ class webCamConnect:
         self.interval=0
         self.path=os.getcwd()
         self.img_quality = 15
-    def _setSocket(self):
-        self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM);
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
-    def connect(self):
-        self._setSocket();
-        self.socket.connect(('192.168.0.100',7999));
-    def _processImage(self):
-        self.socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
+
+    def _processImage(self,server_socket):
+        server_socket.send('926640480'.encode('utf-8'));   # struct.pack("lhh",self.src,self.resolution[0],self.resolution[1])
         i = 1
         flag = 1
-        with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt', 'w') as f:
-            f.write('1')
+        # with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt', 'w') as f:
         while(flag):
             # info = struct.unpack("l", self.socket.recv(8));
-            with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt','r') as f:
+            with open(settings.VIDEO_SWITCH_URL,'r') as f:
                 flag = int(f.read())
-            info = self.socket.recv(4).decode('utf-8')
+            info = server_socket.recv(4).decode('utf-8')
             print(info)
             bufSize = int(info)
             self.control = 'start'
@@ -49,14 +43,15 @@ class webCamConnect:
                     # tempBuf=self.buf
 
                     while(bufSize):                 #循环读取到一张图片的长度
-                        tempBuf = self.socket.recv(bufSize);
+                        tempBuf = server_socket.recv(bufSize);
                         bufSize -= len(tempBuf);
                         self.buf += tempBuf;
                         print('1')
                         data = numpy.fromstring(self.buf,dtype='uint8')
                         print(2)
                         self.image=cv2.imdecode(data,1)
-                        path = '/home/python/Desktop/MyGraduationDesign/static/img/video/image%d.jpg' %i
+                        # path = '/home/python/Desktop/MyGraduationDesign/static/img/video/image%d.jpg' %i
+                        path = os.path.join(settings.VIDEO_IMAGE_URL,'image%d.jpg'%i)
 
                         print(path)
                         with open(path,'wb')as f:
@@ -74,12 +69,14 @@ class webCamConnect:
                  finally:
                      self.mutex.release();
                      if cv2.waitKey(10) == 27:
-                         self.socket.close()
+                         server_socket.close()
                          # cv2.destroyAllWindows()
                          print("放弃连接")
                          break
-    def getData(self, interval):
-        showThread=threading.Thread(target=self._processImage);
+        server_socket.close()
+
+    def getData(self,server_socket):
+        showThread=threading.Thread(target=self._processImage,args=(server_socket,))
         showThread.start();
         # if interval != 0:   # 非0则启动保存截图到本地的功能
         #     saveThread=threading.Thread(target=self._savePicToLocal,args = (interval,
@@ -139,18 +136,36 @@ class webCamConnect:
     #         self.src=911+self.img_quality
     #         f.close()
     #         print("读取配置")
-    def stopVideo(self):
-        self.control = 'stop'
-def main():
+def connect():
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
+    server_socket.connect(('192.168.0.100',7999));
+    return server_socket
+
+
+def recv_image():
     print("创建连接...")
     cam = webCamConnect();
     # cam.check_config()
     print("像素为:%d * %d"%(cam.resolution[0],cam.resolution[1]))
     print("目标ip为%s:%d"%(cam.remoteAddress[0],cam.remoteAddress[1]))
-    cam.connect();
-    cam.getData(cam.interval);
+    server_socket = connect()
+    cam.getData(server_socket)
+
+def open_lock():
+    server_socket = connect()
+    server_socket.send('open_lock'.encode('utf-8'))
+    server_socket.close()
+
+def close_lock():
+    server_socket = connect()
+    server_socket.send('close_lock'.encode('utf-8'))
+    server_socket.close()
 
 
 if __name__ == "__main__":
-    main()
+
+    soc = connect()
+    print(type(soc))
+    recv_image(soc)
 

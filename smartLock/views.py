@@ -1,3 +1,6 @@
+import os
+import socket
+
 from django.shortcuts import render,redirect
 from django.http import HttpResponse,JsonResponse
 from django.views.generic import View
@@ -163,6 +166,12 @@ class LoginView(View):
         else:
             response.delete_cookie('uname')
 
+        # 设置socket连接
+        # server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM);
+        # server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1);
+        # server_socket.connect(('192.168.0.100', 7999));
+        # response.set_cookie('server_socket',server_socket,expires=60*60*24*7)
+
         if next_page:
             return redirect(next_page)
         else:
@@ -176,12 +185,21 @@ def info(request):
 @login_required
 def video(request):
     # 视频
-    Vdemo.main()
+    # server_socket = request.COOKIES.get('server_socket')
+    # print(server_socket)
+    # Vdemo.recv_image(server_socket)
+
+    # 修改控制图片传输文件的值
+    with open(settings.VIDEO_SWITCH_URL, 'w') as f:
+        f.write('1')
+    Vdemo.recv_image()
     return render(request,'video.html')
 
 def logout_user(request):
+    response = redirect('/')
+    response.delete_cookie('server_socket')
     logout(request)
-    return redirect('/')
+    return response
 
 # 登陆状态检测
 class LoginRequireMixin(object):
@@ -285,6 +303,25 @@ def video_img(request):
 def stop_video(request):
     # 停止摄像头
     # Vdemo.stop()
-    with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt','w') as f:
+    # with open('/home/python/Desktop/MyGraduationDesign/static/stopVideo.txt','w') as f:
+    with open(settings.VIDEO_SWITCH_URL, 'w') as f:
         f.write('0')
+
+    # print(os.listdir(settings.VIDEO_IMAGE_URL))
+
     return redirect('/info')
+
+
+@login_required
+def open_lock(request):
+    # 开锁
+    # server_socket = request.COOKIES.get('server_socket')
+    Vdemo.open_lock()
+    return render(request,'info.html')
+
+@login_required
+def close_lock(request):
+    # 关锁
+    # server_socket = request.COOKIES.get('server_socket')
+    Vdemo.close_lock()
+    return render(request, 'info.html')

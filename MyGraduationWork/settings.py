@@ -138,3 +138,6 @@ EMAIL_FROM = 'SmartLock<ylwebserver@163.com>'
 # }
 
 LOGIN_URL = '/login'
+
+VIDEO_IMAGE_URL = os.path.join(BASE_DIR,'static/img/video')
+VIDEO_SWITCH_URL = os.path.join(BASE_DIR,'static/stopVideo.txt')
