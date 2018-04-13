@@ -25,9 +25,9 @@ sys.path.insert(1,BASE_DIR)
 SECRET_KEY = 'ap=8u!zmnv+c-rub9sw@#3skvla(k55x+if*u&2ftl!!ka_x*7'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*',]
 
 
 # Application definition
@@ -96,7 +96,7 @@ DATABASES = {
 
 LANGUAGE_CODE = 'zh-Hans'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'  #'UTC'
 
 USE_I18N = True
 
